@@ -1,61 +1,43 @@
 import streamlit as st
-import requests
+import edge_tts
+import asyncio
 
-# 1. App Title
-st.title("🗣️ Brian Multilingual (Json2Video API)")
+st.title("🗣️ Brian Multilingual (Free Edge Version)")
 
-# 2. API Key Setup (Secure)
-# Tries to get from secrets first, otherwise asks user
-api_key = st.secrets.get("JSON2VIDEO_API_KEY")
-if not api_key:
-    api_key = st.text_input("Enter Json2Video API Key", type="password")
+# 1. User Input
+text_input = st.text_area("Text to speak", "Hello! I am Brian. ¡Hola! Soy Brian.")
 
-# 3. User Inputs
-# We default to the voice you requested: Brian Multilingual
-voice_id = "en-US-BrianMultilingualNeural"
-text_input = st.text_area("Text to speak (English, Spanish, French, etc.)", "Hello! I am Brian. ¡Hola! Soy Brian.")
+# 2. Async Function to Generate Audio
+async def generate_speech(text, output_file):
+    voice = "en-US-BrianMultilingualNeural"
+    communicate = edge_tts.Communicate(text, voice)
+    await communicate.save(output_file)
 
-# 4. The Generation Logic
+# 3. The Button
 if st.button("Generate Audio"):
-    if not api_key:
-        st.error("Please enter your API Key.")
+    if not text_input:
+        st.error("Please enter some text.")
     else:
-        with st.spinner("Requesting audio from Json2Video..."):
+        output_file = "brian_edge.mp3"
+        
+        with st.spinner("Generating..."):
+            # Run the async function
             try:
-                # API Configuration
-                url = "https://api.json2video.com/v2/voice"
+                asyncio.run(generate_speech(text_input, output_file))
                 
-                payload = {
-                    "text": text_input,
-                    "voice": voice_id
-                }
+                # Success!
+                st.success("Generated successfully!")
                 
-                headers = {
-                    "x-api-key": api_key,
-                    "Content-Type": "application/json"
-                }
-
-                # Make the request
-                response = requests.post(url, json=payload, headers=headers)
-
-                # Handle Response
-                if response.status_code == 200:
-                    # Success: Play and Download
-                    st.success("Success!")
-                    
-                    # Display Audio Player
-                    st.audio(response.content, format="audio/mp3")
-                    
-                    # Download Button
+                # Play Audio
+                st.audio(output_file, format="audio/mp3")
+                
+                # Download Button
+                with open(output_file, "rb") as f:
                     st.download_button(
                         label="Download MP3",
-                        data=response.content,
-                        file_name="brian_multilingual.mp3",
+                        data=f,
+                        file_name="brian_voice.mp3",
                         mime="audio/mp3"
                     )
-                else:
-                    # Error from API
-                    st.error(f"Error {response.status_code}: {response.text}")
-                    
             except Exception as e:
-                st.error(f"Connection Error: {e}")
+                st.error(f"Error: {e}")
